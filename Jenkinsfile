@@ -132,7 +132,7 @@ pipeline {
             emailext(
                 subject: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                 body: "Check Jenkins logs: ${env.BUILD_URL}",
-                to: 'your-email@gmail.com'
+                to: 'nareshtullibilli666@gmail.com'
             )
         }
 
