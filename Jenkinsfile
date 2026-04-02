@@ -23,7 +23,9 @@ pipeline {
     stages {
 
         stage('Clean Workspace') {
-            steps { cleanWs() }
+            steps {
+                cleanWs()
+            }
         }
 
         stage('Checkout from Git') {
@@ -61,32 +63,38 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh '''
-                    pwd && ls -la
-                    cd hotstar
-                    npm install
-                '''
+                dir('hotstar') {
+                    sh '''
+                        pwd
+                        ls -la
+                        npm install
+                    '''
+                }
             }
         }
 
         stage('TRIVY FS Scan') {
             steps {
-                sh 'trivy fs . > trivyfs.txt'
+                dir('hotstar') {
+                    sh 'trivy fs . > trivyfs.txt'
+                }
             }
         }
 
         stage('Docker Build & Push') {
             steps {
-                withDockerRegistry(credentialsId: 'docker', url: 'https://index.docker.io/v1/') {
-                    withCredentials([string(credentialsId: 'tmdb-api-key', variable: 'TMDB_KEY')]) {
-                        sh """
-                            docker build --no-cache \
-                              --build-arg REACT_APP_TMDB=${TMDB_KEY} \
-                              -t ${IMAGE_NAME}:${BUILD_NUMBER} hotstar/
-                            docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest
-                            docker push ${IMAGE_NAME}:${BUILD_NUMBER}
-                            docker push ${IMAGE_NAME}:latest
-                        """
+                dir('hotstar') {
+                    withDockerRegistry(credentialsId: 'docker', url: 'https://index.docker.io/v1/') {
+                        withCredentials([string(credentialsId: 'tmdb-api-key', variable: 'TMDB_KEY')]) {
+                            sh """
+                                docker build --no-cache \
+                                  --build-arg REACT_APP_TMDB=${TMDB_KEY} \
+                                  -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                                docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest
+                                docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                                docker push ${IMAGE_NAME}:latest
+                            """
+                        }
                     }
                 }
             }
@@ -120,12 +128,12 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'trivyfs.txt, trivyimage.txt', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'hotstar/trivyfs.txt, trivyimage.txt', allowEmptyArchive: true
             echo 'Pipeline execution complete.'
         }
 
         success {
-            echo "Pipeline succeeded! Image ${IMAGE_NAME}:${BUILD_NUMBER} deployed."
+            echo "✅ Pipeline succeeded! Image ${IMAGE_NAME}:${BUILD_NUMBER} deployed."
         }
 
         failure {
