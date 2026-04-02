@@ -13,6 +13,7 @@ pipeline {
     }
 
     environment {
+        SCANNER_HOME  = tool 'sonar-scanner'
         DOCKERHUB_USER = 'naresh9163'
         IMAGE_NAME     = "${DOCKERHUB_USER}/hotstar"
         EKS_REGION     = 'us-east-1'
