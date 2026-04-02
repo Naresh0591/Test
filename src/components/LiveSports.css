@@ -1,0 +1,150 @@
+.sports-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sport-filter {
+  padding: 5px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--muted);
+  font-family: var(--font-body);
+  transition: all 0.2s;
+}
+.sport-filter:hover,
+.sport-filter.active {
+  background: var(--hot-blue);
+  border-color: var(--hot-blue);
+  color: #fff;
+}
+
+/* Row */
+.sports-row {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.sports-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* Card */
+.sport-card {
+  flex-shrink: 0;
+  width: 280px;
+  height: 160px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  background: var(--surface);
+  transition: all 0.25s;
+}
+.sport-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(26, 108, 255, 0.45);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.sport-card.is-live {
+  border-color: rgba(220, 30, 30, 0.3);
+}
+.sport-card.is-live:hover {
+  border-color: rgba(220, 30, 30, 0.6);
+}
+
+/* Background emoji */
+.sport-bg-emoji {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  font-size: 72px;
+  opacity: 0.08;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Live badge */
+.live-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(220, 30, 30, 0.92);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.8px;
+  color: #fff;
+}
+
+.live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+  animation: blink 1.2s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
+/* Card body */
+.sport-body {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 14px 16px;
+  background: linear-gradient(to top, rgba(18,18,30,0.98) 60%, transparent);
+}
+
+.sport-league {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.sport-match {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 3px;
+}
+
+.sport-status {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 8px;
+}
+
+.watch-live-btn {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--hot-blue);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font-body);
+  letter-spacing: 0.3px;
+  transition: color 0.2s;
+}
+.watch-live-btn:hover {
+  color: #fff;
+}
