@@ -63,6 +63,7 @@ pipeline {
             steps {
                 sh '''
                     pwd && ls -la
+                    cd Test
                     npm install
                 '''
             }
@@ -81,7 +82,7 @@ pipeline {
                         sh """
                             docker build --no-cache \
                               --build-arg REACT_APP_TMDB=${TMDB_KEY} \
-                              -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                              -t ${IMAGE_NAME}:${BUILD_NUMBER} Test/
                             docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest
                             docker push ${IMAGE_NAME}:${BUILD_NUMBER}
                             docker push ${IMAGE_NAME}:latest
