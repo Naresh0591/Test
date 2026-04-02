@@ -107,7 +107,10 @@ function App() {
       />
 
       {/* Movie detail modal */}
-      <MovieModal movie={selectedMovie} onClose={() => setSelectedMovie(null)} />
+      <MovieModal
+        movie={selectedMovie}
+        onClose={() => setSelectedMovie(null)}
+       />
     </div>
   );
 }
