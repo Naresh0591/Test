@@ -10,8 +10,9 @@ function Row({ title, fetchUrl, moviesOverride, onMovieClick, isLarge, isTopTen 
   useEffect(() => {
     if (moviesOverride) { setMovies(moviesOverride); return; }
     if (!fetchUrl) return;
-    axios.get(fetchUrl).then((res) => setMovies(res.data.results || []));
-  }, [fetchUrl, moviesOverride]);
+    axios.get(fetchUrl)
+     .then((res) => setMovies(res.data.results || []))
+     .catch((err) => console.error(`Row [${title}] fetch failed:`, err));
 
   if (!movies.length) return null;
 
