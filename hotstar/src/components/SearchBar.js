@@ -12,11 +12,10 @@ function SearchBar({ onSearch, autoFocus }) {
   const handleChange = (e) => {
     setQuery(e.target.value);
     // Live search after 400ms debounce
-    clearTimeout(window._searchTimer);
-    window._searchTimer = setTimeout(() => {
-      onSearch(e.target.value);
-    }, 400);
-  };
+    const timerRef = useRef(null);
+    clearTimeout(timerRef.current);
+     timerRef.current = setTimeout(() => { ... }, 400);
+     };
 
   const handleSubmit = (e) => {
     e.preventDefault();
