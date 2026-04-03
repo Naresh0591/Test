@@ -7,11 +7,11 @@ WORKDIR /app
 ARG REACT_APP_TMDB
 ENV REACT_APP_TMDB=$REACT_APP_TMDB
 
-COPY package.json package-lock.json ./
+COPY package.json ./
 RUN npm install
 
 # COPY AFTER setting ENV so build picks variable
-COPY hotstar/ .
+COPY . .
 
 RUN echo "REACT_APP_TMDB is: $REACT_APP_TMDB"
 RUN npm run build
