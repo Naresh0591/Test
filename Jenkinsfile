@@ -115,7 +115,7 @@ pipeline {
                     sh """
                         export AWS_DEFAULT_REGION=${EKS_REGION}
                         aws eks update-kubeconfig --region ${EKS_REGION} --name ${EKS_CLUSTER}
-                        sed -i "s|${IMAGE_NAME}:latest|${IMAGE_NAME}:${BUILD_NUMBER}|g" deployment.yml
+                        sed -i "s|${IMAGE_NAME}:[^ ]*|${IMAGE_NAME}:${BUILD_NUMBER}|g" deployment.yml
                         kubectl apply -f deployment.yml
                         kubectl rollout status deployment/hotstar
                         kubectl get pods
