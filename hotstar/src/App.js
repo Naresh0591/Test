@@ -3,7 +3,7 @@ import Navbar from "./components/Navbar";
 import Banner from "./components/Banner";
 import Row from "./components/Row";
 import SearchBar from "./components/SearchBar";
-import MovieModal from "./components/MovieModal.js";
+import MovieModal from "./components/MovieModal";
 import LiveSports from "./components/LiveSports";
 import "./App.css";
 
