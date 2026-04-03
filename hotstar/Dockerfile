@@ -11,7 +11,7 @@ COPY package.json package-lock.json ./
 RUN npm install
 
 # COPY AFTER setting ENV so build picks variable
-COPY . .
+COPY hotstar/ .
 
 RUN echo "REACT_APP_TMDB is: $REACT_APP_TMDB"
 RUN npm run build
