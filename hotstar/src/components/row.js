@@ -13,6 +13,7 @@ function Row({ title, fetchUrl, moviesOverride, onMovieClick, isLarge, isTopTen 
     axios.get(fetchUrl)
      .then((res) => setMovies(res.data.results || []))
      .catch((err) => console.error(`Row [${title}] fetch failed:`, err));
+     }, [fetchUrl, moviesOverride]); 
 
   if (!movies.length) return null;
 
