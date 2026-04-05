@@ -34,7 +34,7 @@ pipeline {
                     $class: 'GitSCM',
                     branches: [[name: '*/main']],
                     userRemoteConfigs: [[
-                        url: 'https://github.com/Naresh0591/Hotstar-devops.git',
+                        url: 'https://github.com/Naresh0591/Test.git',
                         credentialsId: 'github-token'
                     ]]
                 ])
