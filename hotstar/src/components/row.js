@@ -11,9 +11,9 @@ function Row({ title, fetchUrl, moviesOverride, onMovieClick, isLarge, isTopTen 
     if (moviesOverride) { setMovies(moviesOverride); return; }
     if (!fetchUrl) return;
     axios.get(fetchUrl)
-     .then((res) => setMovies(res.data.results || []))
-     .catch((err) => console.error(`Row [${title}] fetch failed:`, err));
-     }, [fetchUrl, moviesOverride]); 
+      .then((res) => setMovies(res.data.results || []))
+      .catch((err) => console.error(`Row [${title}] fetch failed:`, err));
+  }, [fetchUrl, moviesOverride]);
 
   if (!movies.length) return null;
 
@@ -84,7 +84,6 @@ function Row({ title, fetchUrl, moviesOverride, onMovieClick, isLarge, isTopTen 
                 <div className="poster-placeholder">{movie.title}</div>
               )}
 
-              {/* Hover overlay */}
               <div className="card-overlay">
                 <div className="play-btn">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff">
@@ -93,7 +92,6 @@ function Row({ title, fetchUrl, moviesOverride, onMovieClick, isLarge, isTopTen 
                 </div>
               </div>
 
-              {/* Rating badge */}
               {movie.vote_average >= 7.5 && (
                 <div className="card-badge gold">
                   ★ {movie.vote_average.toFixed(1)}
