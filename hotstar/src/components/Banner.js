@@ -36,34 +36,22 @@ function Banner({ apiKey, onMovieClick }) {
       }}
     >
       <div className="banner-overlay" />
-
       <div className="banner-content">
         <div className="banner-badge">
           <span className="banner-badge-dot" />
           NOW STREAMING
         </div>
-
         <h1 className="banner-title">{movie?.title}</h1>
-
         <div className="banner-meta">
-          <span className="banner-rating">
-            ★ {movie?.vote_average?.toFixed(1)}
-          </span>
+          <span className="banner-rating">★ {movie?.vote_average?.toFixed(1)}</span>
           <span className="banner-dot" />
           <span>{movie?.release_date?.split("-")[0]}</span>
           <span className="banner-dot" />
           <span>HD</span>
         </div>
-
-        <p className="banner-description">
-          {truncate(movie?.overview, 180)}
-        </p>
-
+        <p className="banner-description">{truncate(movie?.overview, 180)}</p>
         <div className="banner-actions">
-          <button
-            className="btn-play"
-            onClick={() => onMovieClick && onMovieClick(movie)}
-          >
+          <button className="btn-play" onClick={() => onMovieClick && onMovieClick(movie)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="#0a0a12">
               <polygon points="5,3 19,12 5,21" />
             </svg>
@@ -83,20 +71,16 @@ function Banner({ apiKey, onMovieClick }) {
           </button>
         </div>
       </div>
-
       <div className="banner-thumbs">
         {movies.map((m, i) => (
           <div
             key={m.id}
             className={`banner-thumb ${i === current ? "active" : ""}`}
             onClick={() => setCurrent(i)}
-            style={{
-              backgroundImage: `url("https://image.tmdb.org/t/p/w200${m.poster_path}")`,
-            }}
+            style={{ backgroundImage: `url("https://image.tmdb.org/t/p/w200${m.poster_path}")` }}
           />
         ))}
       </div>
-
       <div className="banner-dots">
         {movies.map((_, i) => (
           <div
