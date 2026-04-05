@@ -9,12 +9,12 @@ function Banner({ apiKey, onMovieClick }) {
   useEffect(() => {
     axios
       .get(`https://api.themoviedb.org/3/movie/popular?api_key=${apiKey}`)
-      .then((res) => setMovies(res.data.results.slice(0, 5)));
+      .then((res) => setMovies(res.data.results.slice(0, 5)))
+      .catch((err) => console.error("Banner fetch failed:", err));
   }, [apiKey]);
 
   const movie = movies[current];
 
-  // Auto-rotate banner every 7 seconds
   useEffect(() => {
     if (movies.length === 0) return;
     const timer = setInterval(() => {
@@ -84,7 +84,6 @@ function Banner({ apiKey, onMovieClick }) {
         </div>
       </div>
 
-      {/* Thumbnail switcher */}
       <div className="banner-thumbs">
         {movies.map((m, i) => (
           <div
@@ -98,7 +97,6 @@ function Banner({ apiKey, onMovieClick }) {
         ))}
       </div>
 
-      {/* Progress dots */}
       <div className="banner-dots">
         {movies.map((_, i) => (
           <div
