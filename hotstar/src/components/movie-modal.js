@@ -73,4 +73,4 @@ function MovieModal({ movie, onClose }) {
   );
 }
 
-export default MoviePopup;
+export default MovieModal;
