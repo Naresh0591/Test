@@ -87,6 +87,7 @@ pipeline {
                     withDockerRegistry(credentialsId: 'docker', url: 'https://index.docker.io/v1/') {
                         withCredentials([string(credentialsId: 'tmdb-api-key', variable: 'TMDB_KEY')]) {
                             sh """
+                                docker system prune -f
                                 docker build --no-cache \
                                   --build-arg REACT_APP_TMDB=${TMDB_KEY} \
                                   -t ${IMAGE_NAME}:${BUILD_NUMBER} .
