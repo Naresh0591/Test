@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import Navbar from "./components/navbar";
-import Banner from "./components/banner";
-import Row from "./components/row";
-import SearchBar from "./components/search-bar";
-import MovieModal from "./components/movie-modal";
-import LiveSports from "./components/live-sports";
+import Navbar from "./components/Navbar";
+import Banner from "./components/Banner";
+import Row from "./components/Row";
+import SearchBar from "./components/SearchBar";
+import MovieModal from "./components/MovieModal";
+import LiveSports from "./components/LiveSports";
 import "./App.css";
 
 const API_KEY = process.env.REACT_APP_TMDB;
