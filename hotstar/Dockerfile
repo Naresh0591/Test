@@ -5,7 +5,8 @@ ARG REACT_APP_TMDB
 ENV REACT_APP_TMDB=$REACT_APP_TMDB
 COPY package.json package-lock.json ./
 RUN npm install
-COPY . .
+COPY public/ ./public/
+COPY src/ ./src/
 RUN npm run build
 
 # Stage 2: Production (Secured)
