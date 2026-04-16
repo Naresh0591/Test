@@ -5,6 +5,7 @@ pipeline {
         disableConcurrentBuilds()
         skipDefaultCheckout()
         durabilityHint('PERFORMANCE_OPTIMIZED')
+        timeout(time: 1, unit: 'HOURS')
     }
 
     tools {
@@ -47,7 +48,8 @@ pipeline {
                     sh """
                         ${SCANNER_HOME}/bin/sonar-scanner \
                         -Dsonar.projectName=hotstar \
-                        -Dsonar.projectKey=hotstar
+                        -Dsonar.projectKey=hotstar  \
+                        -Dsonar.projectVersion=${BUILD_NUMBER}
                     """
                 }
             }
@@ -55,8 +57,8 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                timeout(time: 1, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: false
+                timeout(time: 3, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
@@ -67,7 +69,7 @@ pipeline {
                     sh '''
                         pwd
                         ls -la
-                        npm install
+                        npm ci
                     '''
                 }
             }
@@ -76,7 +78,7 @@ pipeline {
         stage('TRIVY FS Scan') {
             steps {
                 dir('hotstar') {
-                    sh 'trivy fs . > trivyfs.txt'
+                    sh "trivy image --severity CRITICAL --exit-code 1 ${IMAGE_NAME}:${BUILD_NUMBER} > trivyimage.txt"
                 }
             }
         }
@@ -87,7 +89,6 @@ pipeline {
                     withDockerRegistry(credentialsId: 'docker', url: 'https://index.docker.io/v1/') {
                         withCredentials([string(credentialsId: 'tmdb-api-key', variable: 'TMDB_KEY')]) {
                             sh """
-                                docker system prune -f
                                 docker build --no-cache \
                                   --build-arg REACT_APP_TMDB=${TMDB_KEY} \
                                   -t ${IMAGE_NAME}:${BUILD_NUMBER} .
@@ -134,9 +135,14 @@ pipeline {
         }
 
         success {
-            echo "✅ Pipeline succeeded! Image ${IMAGE_NAME}:${BUILD_NUMBER} deployed."
+            echo "Pipeline succeeded! Image ${IMAGE_NAME}:${BUILD_NUMBER} deployed."
+            emailext(
+                subject: "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "Image ${IMAGE_NAME}:${BUILD_NUMBER} deployed successfully.\nBuild URL: ${env.BUILD_URL}",
+                to: 'nareshtullibilli666@gmail.com'
+            )
         }
-
+ 
         failure {
             emailext(
                 subject: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
