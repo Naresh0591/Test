@@ -1,0 +1,1 @@
+This my scenario i have a Jenkins pipeline and whenever the job has build using webhook's in Microsoft Teams channel i need to get notified for that the automation Microsoft workflow is needed how to set it. Previously we use the webhook directly due to costing issues we need to move to Microsoft work flow.
