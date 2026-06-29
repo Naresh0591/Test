@@ -1,0 +1,104 @@
+try {
+    $ErrorActionPreference = "Stop"
+
+    # Get Jenkins build status
+    $status = $env:BUILD_STATUS
+    if (-not $status) { $status = "SUCCESS" }
+
+    if ($status -eq "SUCCESS") {
+        $color = "Good"
+    } else {
+        $color = "Attention"
+    }
+
+    # Time format
+    $time = Get-Date -Format "dd-MMM-yyyy hh:mm tt"
+
+    # Get user
+    $user = $env:BUILD_USER
+    if (-not $user) { $user = $env:BUILD_USER_ID }
+    if (-not $user) { $user = "Unknown" }
+
+    $remarks = "Started by user $user"
+
+    # Adaptive Card
+    $card = @{
+        '$schema' = "http://adaptivecards.io/schemas/adaptive-card.json"
+        type = "AdaptiveCard"
+        version = "1.2"
+        body = @(
+            @{
+                type = "TextBlock"
+                text = "Jenkins Build Notification"
+                weight = "Bolder"
+                size = "Medium"
+            },
+            @{
+                type = "TextBlock"
+                text = "Project : BusinessNext_Development"
+            },
+            @{
+                type = "TextBlock"
+                text = "Job     : Generate_Bundle_Js"
+            },
+            @{
+                type = "TextBlock"
+                text = "Version : 27.1.0.0"
+            },
+            @{
+                type = "TextBlock"
+                text = "Status  : $status"
+                weight = "Bolder"
+                color = $color
+            },
+            @{
+                type = "TextBlock"
+                text = "Remarks :"
+                weight = "Bolder"
+            },
+            @{
+                type = "TextBlock"
+                text = $remarks
+                wrap = $true
+            },
+            @{
+                type = "TextBlock"
+                text = "Time :"
+                weight = "Bolder"
+            },
+            @{
+                type = "TextBlock"
+                text = $time
+            }
+        )
+    } | ConvertTo-Json -Depth 10
+}
+catch {
+    $card = @{
+        '$schema' = "http://adaptivecards.io/schemas/adaptive-card.json"
+        type = "AdaptiveCard"
+        version = "1.2"
+        body = @(
+            @{
+                type = "TextBlock"
+                text = "Notification script failed"
+                weight = "Bolder"
+                color = "Attention"
+            }
+        )
+    } | ConvertTo-Json
+}
+
+# Send to Power Automate
+try {
+    Invoke-RestMethod `
+        -Uri "https://default37cadf443c1b4c91a356e885893e18.3a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/425f34cb6d81479c9ee39f040771aae7/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=54gX-q9lf5JWSKq3Rp-F1jjfZnxtvLTQvNDafnwUamM" `
+        -Method Post `
+        -Body $card `
+        -ContentType "application/json"
+}
+catch {
+    Write-Output "Notification failed: $_"
+}
+
+exit 0
