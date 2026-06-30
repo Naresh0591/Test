@@ -10,16 +10,25 @@ try {
     } else {
         $color = "Attention"
     }
-
+    
     # Time format
     $time = Get-Date -Format "dd-MMM-yyyy hh:mm tt"
 
+    #Job name
+    $JobName = $env:JOB_NAME
+    
     # Get user
     $user = $env:BUILD_USER
     if (-not $user) { $user = $env:BUILD_USER_ID }
     if (-not $user) { $user = "Unknown" }
 
+    # Version (Optional)
+    $Version = $env:APP_VERSION
+    if (-not $Version) { $Version = "N/A" }
     $remarks = "Started by user $user"
+
+    #Build URL
+    $BuildURL = $env:BUILD_URL
 
     # Adaptive Card
     $card = @{
@@ -39,11 +48,11 @@ try {
             },
             @{
                 type = "TextBlock"
-                text = "Job     : Generate_Bundle_Js"
+                text = "Job     : $JobName"
             },
             @{
                 type = "TextBlock"
-                text = "Version : 27.1.0.0"
+                text = "Version : $Version"
             },
             @{
                 type = "TextBlock"
@@ -69,6 +78,11 @@ try {
             @{
                 type = "TextBlock"
                 text = $time
+            },
+            @{
+                type = "TextBlock"
+                text = "Build URL : $BuildURL"
+                wrap = $true
             }
         )
     } | ConvertTo-Json -Depth 10
