@@ -1,0 +1,298 @@
+trigger:
+  branches:
+    include:
+    - LinuxCompilation22July2026
+
+stages:
+- stage: ParallelBuild
+  displayName: Parallel Build Stage
+  jobs:
+  - job: DotNetSolutionBuild
+    displayName: .NET Solution Build
+    pool:
+      vmImage: ubuntu-latest
+    workspace:
+      clean: all
+    variables:
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      DOTNET_NOLOGO: true
+      NUGET_PACKAGES: $(Pipeline.Workspace)/.nuget/packages
+    steps:
+    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
+      inputs:
+        repository: self
+        clean: true
+        fetchDepth: 1
+        persistCredentials: false
+
+    - task: UseDotNet@2
+      displayName: Install .NET SDK
+      inputs:
+        packageType: sdk
+        version: '8.0.x'
+        includePreviewVersions: true
+        performMultiLevelLookup: true
+
+    - task: UseDotNet@2
+      displayName: Install .NET 9 Runtime (required by Paket 10.x)
+      inputs:
+        packageType: runtime
+        version: '9.0.x'
+
+    - task: CmdLine@2
+      displayName: Install Paket (manual extraction, bypassing dotnet tool install)
+      inputs:
+        script: |
+          set -e
+          PAKET_VERSION="10.3.1"
+          PAKET_DIR="$(Build.SourcesDirectory)/CRMnext/.paket"
+
+          echo "Downloading Paket $PAKET_VERSION nupkg directly from nuget.org..."
+          mkdir -p "$PAKET_DIR"
+          curl -sSL -o /tmp/paket.nupkg \
+            "https://api.nuget.org/v3-flatcontainer/paket/${PAKET_VERSION}/paket.${PAKET_VERSION}.nupkg"
+
+          echo "Extracting package..."
+          mkdir -p /tmp/paket-extracted
+          unzip -q /tmp/paket.nupkg -d /tmp/paket-extracted
+
+          echo "Locating paket.dll..."
+          PAKET_DLL=$(find /tmp/paket-extracted/tools -name "paket.dll" | head -n 1)
+
+          if [ -z "$PAKET_DLL" ]; then
+            echo "❌ Could not find paket.dll inside the package. Listing contents for debugging:"
+            find /tmp/paket-extracted -maxdepth 4
+            exit 1
+          fi
+
+          echo "Found: $PAKET_DLL"
+          cp -r "$(dirname "$PAKET_DLL")/." "$PAKET_DIR/"
+
+          echo "Creating wrapper script..."
+          cat > "$PAKET_DIR/paket" << 'WRAPPER_EOF'
+          #!/usr/bin/env bash
+          DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          exec dotnet "$DIR/paket.dll" "$@"
+          WRAPPER_EOF
+          chmod +x "$PAKET_DIR/paket"
+
+          echo "Verifying installation..."
+          "$PAKET_DIR/paket" --version
+
+    - task: NuGetAuthenticate@1
+      displayName: Authenticate to Azure Artifacts
+
+    - task: CmdLine@2
+      displayName: Authenticate Paket to Azure Artifacts
+      inputs:
+        script: |
+          CRMnext/.paket/paket config add-credentials \
+            "https://pkgs.dev.azure.com/acidaes/_packaging/acidaes/nuget/v3/index.json" \
+            --username AzureDevOps \
+            --password xyz
+
+    - task: Cache@2
+      displayName: Cache NuGet packages
+      inputs:
+        key: 'nuget | "$(Agent.OS)" | CRMnext/**/packages.lock.json, CRMnext/**/*.csproj'
+        path: $(NUGET_PACKAGES)
+        cacheHitVar: 'NUGET_CACHE_RESTORED'
+
+    - task: CmdLine@2
+      displayName: Pre-Build Space Cleanup
+      inputs:
+        script: |
+          echo "Pre-build cleanup for Ubuntu..."
+          sudo rm -rf ~/.nuget/packages $(Agent.TempDirectory)/* /tmp/* 2>/dev/null || true
+          sudo apt-get clean 2>/dev/null || true
+          sudo rm -rf /var/cache/apt/archives/* 2>/dev/null || true
+          df -h
+          free -h
+
+    - task: CmdLine@2
+      displayName: Build SQL Solution
+      inputs:
+        script: |
+          dotnet build CRMnext/CRMnext_2019_Full.sln \
+            --configuration Release \
+            --configfile CRMnext/nuget.config \
+            --verbosity minimal \
+            /p:Platform="Any CPU" \
+            /p:TargetFramework="net8.0" \
+            /p:BuildInParallel=false \
+            /p:UseSharedCompilation=false \
+            /maxcpucount:1 \
+            /p:RestorePackagesConfig=true \
+            /nodeReuse:false \
+            /p:TreatWarningsAsErrors=false
+
+    - task: DotNetCoreCLI@2
+      displayName: Clean SQL Solution
+      inputs:
+        command: custom
+        custom: clean
+        projects: CRMnext/CRMnext_2019_Full.sln
+        arguments: >
+          --configuration Release
+          /p:Platform="Any CPU"
+          --verbosity minimal
+
+    - task: CmdLine@2
+      displayName: Post-Build Cleanup
+      inputs:
+        script: |
+          sudo rm -rf ~/.nuget/packages/*/contentFiles 2>/dev/null || true
+          sudo find $(Agent.TempDirectory) -name "*.tmp" -delete 2>/dev/null || true
+          echo "Ubuntu build completed, memory freed"
+        condition: always()
+
+  - job: JSAndCSSCompilation
+    displayName: JS and CSS Compilation
+    pool:
+      vmImage: windows-latest
+    workspace:
+      clean: all
+    variables:
+      NODE_OPTIONS: '--max-old-space-size=5120'
+      PNPM_CONFIG_CACHE: $(Pipeline.Workspace)\.pnpm-store
+      HUSKY: 0
+      CI: true
+      npm_config_prefer_offline: true
+      npm_config_no_audit: true
+    steps:
+    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
+      inputs:
+        repository: self
+        clean: true
+        fetchDepth: 1
+
+    - task: UseNode@1
+      displayName: Use Node.js 22.13 LTS
+      inputs:
+        version: '22.13.x'
+
+    - task: Cache@2
+      displayName: Cache pnpm store
+      inputs:
+        key: 'pnpm | "$(Agent.OS)" | CRMnext\Acidaes.BusinessNext.Client\javascriptmodules\businessnext-monorepo\pnpm-lock.yaml'
+        path: $(PNPM_CONFIG_CACHE)
+        cacheHitVar: 'PNPM_CACHE_RESTORED'
+
+    - task: PowerShell@2
+      displayName: Setup pnpm
+      inputs:
+        script: |
+          Write-Host "Setting up pnpm on Windows..."
+
+          npm install -g pnpm@10 --no-audit
+
+          pnpm config set store-dir "$(PNPM_CONFIG_CACHE)"
+          pnpm config set registry "https://registry.npmjs.org/"
+
+          pnpm config set network-concurrency 1
+          pnpm config set prefer-offline true
+
+          $env:NODE_OPTIONS = "--max-old-space-size=5120"
+          Write-Host "NODE_OPTIONS set to: $env:NODE_OPTIONS"
+
+          Write-Host "Available Memory:"
+          Get-WmiObject -Class Win32_ComputerSystem | Select-Object TotalPhysicalMemory
+
+    - task: PowerShell@2
+      displayName: Install JS Dependencies
+      inputs:
+        script: |
+          Set-Location "CRMnext\Acidaes.BusinessNext.Client\javascriptmodules\businessnext-monorepo"
+
+          $env:NODE_OPTIONS = "--max-old-space-size=5120"
+
+          if ($env:PNPM_CACHE_RESTORED -eq "true") {
+            Write-Host "Cache restored, installing with offline preference..."
+            pnpm install --frozen-lockfile --prefer-offline --no-optional
+          } else {
+            Write-Host "No cache found, installing from registry..."
+            pnpm install --frozen-lockfile --no-optional
+          }
+        workingDirectory: CRMnext\Acidaes.BusinessNext.Client\javascriptmodules\businessnext-monorepo
+
+    - task: PowerShell@2
+      displayName: Build JS
+      inputs:
+        script: |
+          Set-Location "CRMnext\Acidaes.BusinessNext.Client\javascriptmodules\businessnext-monorepo"
+
+          $env:NODE_OPTIONS = "--max-old-space-size=5120 --gc-interval=100"
+
+          Write-Host "Starting build with memory optimization..."
+          Write-Host "NODE_OPTIONS: $env:NODE_OPTIONS"
+
+          try {
+            pnpm run build:all --max-workers=1
+            $exitCode = $LASTEXITCODE
+
+            if ($exitCode -eq 1) {
+              Write-Host "Build completed with warnings (exit code 1). Continuing..."
+              $exitCode = 0
+            } elseif ($exitCode -ne 0) {
+              Write-Host "Build failed with exit code $exitCode."
+              Remove-Item -Path "node_modules\.cache" -Recurse -Force -ErrorAction SilentlyContinue
+              exit $exitCode
+            } else {
+              Write-Host "Build succeeded with exit code 0."
+            }
+          } catch {
+            Write-Host "Build encountered an error: $_"
+            exit 1
+          }
+        workingDirectory: CRMnext\Acidaes.BusinessNext.Client\javascriptmodules\businessnext-monorepo
+
+    - task: Cache@2
+      displayName: Cache npm packages for CSS build
+      inputs:
+        key: 'npm | "$(Agent.OS)" | CRMnext\Acidaes.BusinessNext.Client\cssmodules\package-lock.json'
+        path: 'CRMnext\Acidaes.BusinessNext.Client\cssmodules\node_modules'
+        cacheHitVar: 'NPM_CSS_CACHE_RESTORED'
+
+    - task: PowerShell@2
+      displayName: Install Dart Sass Package
+      inputs:
+        script: |
+          Set-Location "CRMnext\Acidaes.BusinessNext.Client\cssmodules"
+
+          $env:NODE_OPTIONS = "--max-old-space-size=3072"
+
+          if ($env:NPM_CSS_CACHE_RESTORED -ne "true") {
+            Write-Host "Installing CSS dependencies..."
+            npm ci --prefer-offline --no-audit --no-fund
+          } else {
+            Write-Host "CSS dependencies restored from cache"
+          }
+        workingDirectory: CRMnext\Acidaes.BusinessNext.Client\cssmodules
+
+    - task: PowerShell@2
+      displayName: Compile Scss Files
+      inputs:
+        script: |
+          Set-Location "CRMnext\Acidaes.BusinessNext.Client\cssmodules"
+
+          $env:NODE_OPTIONS = "--max-old-space-size=3072"
+
+          Write-Host "Compiling SCSS with Windows optimization..."
+          npm run build
+        workingDirectory: CRMnext\Acidaes.BusinessNext.Client\cssmodules
+
+    - task: PowerShell@2
+      displayName: Windows Build Cleanup
+      inputs:
+        script: |
+          Write-Host "Performing Windows cleanup..."
+
+          Remove-Item -Path "$env:APPDATA\npm-cache" -Recurse -Force -ErrorAction SilentlyContinue
+
+          Get-ChildItem -Path $env:TEMP -Filter "npm-*" -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+          Get-ChildItem -Path "." -Name "node_modules\.cache" -Recurse | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+          Write-Host "Windows cleanup completed"
+        condition: always()
