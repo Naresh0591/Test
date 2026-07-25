@@ -1,0 +1,176 @@
+trigger:
+  branches:
+    include:
+      - main
+
+stages:
+- stage: ParallelBuild
+  displayName: Parallel Build Stage
+  jobs:
+  - job: DotNetSolutionBuild
+    displayName: .NET Solution Build
+    pool:
+      vmImage: ubuntu-latest
+    workspace:
+      clean: all
+    steps:
+    - task: CmdLine@2
+      displayName: "Check Disk Space Before Build"
+      inputs:
+        script: |
+          echo "=== INITIAL DISK USAGE ==="
+          df -h /home/vsts/work/
+          AVAILABLE=$(df --output=avail -k /home/vsts/work/ | tail -1)
+          THRESHOLD=$((10 * 1024 * 1024)) # 10 GB in KB
+          if [ "$AVAILABLE" -lt "$THRESHOLD" ]; then
+            echo "❌ Not enough disk space. Exiting."
+            exit 1
+          fi
+    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
+      inputs:
+        repository: self
+        clean: true
+        fetchDepth: 1
+    - task: UseDotNet@2
+      displayName: Install .NET SDK
+      inputs:
+        packageType: sdk
+        version: '8.0.x'
+        includePreviewVersions: true
+    - task: CmdLine@2
+      displayName: Aggressive Pre-Build Cleanup
+      inputs:
+        script: |
+          dotnet nuget locals all --clear
+          rm -rf ~/.nuget/packages/* ~/.local/share/NuGet/* $(Agent.TempDirectory)/*
+          find . -type d \( -name bin -o -name obj \) -exec rm -rf {} +
+          echo "=== DISK USAGE AFTER INITIAL CLEANUP ==="
+          df -h /home/vsts/work/
+    - task: NuGetAuthenticate@1
+      displayName: Authenticate to Azure Artifacts
+    - task: CmdLine@2
+      displayName: Install & Authenticate Paket
+      inputs:
+        script: |
+          dotnet tool install paket --tool-path CRMnext/.paket
+          CRMnext/.paket/paket config add-credentials \
+            "https://pkgs.dev.azure.com/acidaes/_packaging/acidaes/nuget/v3/index.json" \
+            --username AzureDevOps \
+            --password xyz
+    - task: DotNetCoreCLI@2
+      displayName: Build SQL Solution
+      inputs:
+        command: build
+        projects: CRMnext/CRMnext_2019_Full.sln
+        arguments: --configuration Release --configfile CRMnext/nuget.config /p:Platform="Any CPU"
+    - task: CmdLine@2
+      displayName: Cleanup After SQL Build
+      inputs:
+        script: |
+          chmod +x CRMnext/Clean.sh && ./CRMnext/Clean.sh
+          dotnet nuget locals all --clear
+          rm -rf $(Agent.TempDirectory)/*
+          df -h /home/vsts/work/
+    - task: DotNetCoreCLI@2
+      displayName: Build Oracle Solution
+      inputs:
+        command: build
+        projects: CRMnext/CRMnext_2019_Full-Oracle.sln
+        arguments: --configuration Release --configfile CRMnext/nuget.config /p:Platform="Any CPU"
+    - task: CmdLine@2
+      displayName: Cleanup After Oracle Build
+      inputs:
+        script: |
+          chmod +x CRMnext/Clean.sh && ./CRMnext/Clean.sh
+          dotnet nuget locals all --clear
+          rm -rf $(Agent.TempDirectory)/*
+          df -h /home/vsts/work/
+    - task: DotNetCoreCLI@2
+      displayName: Build NpgSQL Solution
+      inputs:
+        command: build
+        projects: CRMnext/CRMnext_2019_Full-NpgSql.sln
+        arguments: --configuration Release --configfile CRMnext/nuget.config /p:Platform="Any CPU"
+    - task: CmdLine@2
+      displayName: Cleanup After NpgSQL Build
+      inputs:
+        script: |
+          chmod +x CRMnext/Clean.sh && ./CRMnext/Clean.sh
+          dotnet nuget locals all --clear
+          rm -rf $(Agent.TempDirectory)/*
+          df -h /home/vsts/work/
+    - task: CmdLine@2
+      displayName: Final Disk Usage Report
+      inputs:
+        script: |
+          echo "=== FINAL DISK USAGE ==="
+          df -h /home/vsts/work/
+          echo "=== AGENT TEMP DIRECTORY USAGE ==="
+          du -sh $(Agent.TempDirectory) || true
+
+#  - job: BuildJSAndCSS
+#    displayName: "JS & CSS Compilation"
+#    pool:
+#      vmImage: windows-latest
+#    workspace:
+#      clean: all
+#    steps:
+#    - task: 6d15af64-176c-496d-b583-fd2ae21d4df4@1
+#      inputs:
+#        repository: self
+#        clean: true
+#        fetchDepth: 1
+#    - task: UseNode@1
+#      displayName: "Use Node.js 22.13 LTS"
+#      inputs:
+#        version: '22.13.x'
+#    - task: CmdLine@2
+#      displayName: "Setup pnpm"
+#      inputs:
+#        script: npm install -g pnpm@10
+#    - task: CmdLine@2
+#      displayName: "Install JS Dependencies"
+#      inputs:
+#        script: pnpm install
+#        workingDirectory: CRMnext/Acidaes.BusinessNext.Client/javascriptmodules/businessnext-monorepo
+#    - task: PowerShell@2
+#      displayName: "Build JS"
+#      inputs:
+#        targetType: inline
+#        script: |
+#          try {
+#            pnpm run build:all
+#            if ($LASTEXITCODE -ne 0) {
+#              Write-Host "JS build completed with warnings but no fatal errors."
+#              exit 0
+#            }
+#          } catch {
+#            Write-Error "JS build failed with an actual error."
+#            exit 1
+#          }
+#        workingDirectory: CRMnext/Acidaes.BusinessNext.Client/javascriptmodules/businessnext-monorepo
+#    - task: CmdLine@2
+#      displayName: Cleanup After JS Build
+#      inputs:
+#        script: |
+#          echo "Cleaning node_modules and pnpm cache to free space..."
+#          rm -rf node_modules
+#          pnpm store prune
+#          df -h
+#        workingDirectory: CRMnext/Acidaes.BusinessNext.Client/javascriptmodules/businessnext-monorepo
+#    - task: CmdLine@2
+#      displayName: "Install Dart Sass"
+#      inputs:
+#        script: npm install
+#        workingDirectory: CRMnext/Acidaes.BusinessNext.Client/cssmodules
+#    - task: CmdLine@2
+#      displayName: "Compile SCSS"
+#      inputs:
+#        script: npm run build || echo "SCSS build completed with warnings."
+#        workingDirectory: CRMnext/Acidaes.BusinessNext.Client/cssmodules
+#    - task: CmdLine@2
+#      displayName: Final Disk Check JS+CSS
+#      inputs:
+#        script: |
+#          echo "Disk usage after JS & CSS stage:"
+#          df -h
