@@ -1,0 +1,27 @@
+#!/bin/bash
+
+SERVER="192.168.12.145"
+DEST_DIR="/mnt/assets"
+
+FILE_NAME=$(basename "$UPLOAD_ZIP")
+
+echo "Uploading $FILE_NAME"
+
+sshpass -p "$SSH_PASS" scp \
+-o StrictHostKeyChecking=no \
+"$UPLOAD_ZIP" \
+"$SSH_USER@$SERVER:/tmp/"
+
+sshpass -p "$SSH_PASS" ssh \
+-o StrictHostKeyChecking=no \
+"$SSH_USER@$SERVER" << EOF
+
+mkdir -p $DEST_DIR
+
+unzip -o /tmp/$FILE_NAME -d $DEST_DIR
+
+rm -f /tmp/$FILE_NAME
+
+EOF
+
+echo "Success"
