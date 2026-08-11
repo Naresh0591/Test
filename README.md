@@ -1,2 +1,4 @@
 This my scenario i have a Jenkins pipeline and whenever the job has build using webhook's in Microsoft Teams channel i need to get notified for that the automation Microsoft workflow is needed how to set it. Previously we use the webhook directly due to costing issues we need to move to Microsoft work flow.
+
+
 i have 2 jobs in jenkins i first job I''l write a script for hello wolrd after a successful build of the job there should be outlook email containing the Approve and Reject clickable button If i click approve then the second job need to build and here the o/p should be printed here. what are options to achive this give the expected o/p as example for each  
